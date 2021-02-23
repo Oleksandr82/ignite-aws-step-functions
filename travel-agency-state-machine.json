@@ -1,0 +1,156 @@
+{
+    "Comment": "A travel agency state machine",
+    "StartAt": "New",
+    "States": {
+      "New": {
+        "Type": "Pass",
+        "Next": "ReserveFlight",
+        "ResultPath": null
+      },
+      "ReserveFlight": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:eu-west-1:0123456789:function:reserveFlight",
+          "Payload": {
+            "Input.$": "$"
+          }
+        },
+        "ResultSelector": {
+          "result.$": "$.Payload"
+        },
+        "ResultPath": "$.flightReservation",
+        "Next": "IsFlightReservationSuccessful"
+      },
+      "ReserveHotel": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:eu-west-1:0123456789:function:reserveHotel",
+          "Payload": {
+            "Input.$": "$"
+          }
+        },
+        "ResultSelector": {
+          "result.$": "$.Payload"
+        },
+        "ResultPath": "$.hotelReservation",
+        "Next": "IsHotelReservationSuccessful"
+      },
+      "ReserveCar": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:eu-west-1:0123456789:function:reserveCar",
+          "Payload": {
+            "Input.$": "$"
+          }
+        },
+        "ResultSelector": {
+          "result.$": "$.Payload"
+        },
+        "ResultPath": "$.carReservation",
+        "Next": "IsCarReservationSuccessful"
+      },
+      "IsFlightReservationSuccessful": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.flightReservation.result.status",
+            "StringEquals": "OK",
+            "Next": "ReserveHotel"
+          }
+        ],
+        "Default": "TripNotAvailable"
+      },
+      "IsHotelReservationSuccessful": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.hotelReservation.result.status",
+            "StringEquals": "OK",
+            "Next": "ReserveCar"
+          }
+        ],
+        "Default": "CancelFlight"
+      },
+      "IsCarReservationSuccessful": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.carReservation.result.status",
+            "StringEquals": "OK",
+            "Next": "BookedSuccessfully"
+          }
+        ],
+        "Default": "CancelHotel"
+      },
+      "CancelFlight": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:eu-west-1:0123456789:function:cancelReservation",
+          "Payload": {
+            "Input.$": "$"
+          }
+        },
+        "ResultSelector": {
+          "status.$": "$.Payload.status"
+        },
+        "ResultPath": "$.flightReservation.result",
+        "Next": "IsFlightCancellationSuccessful"
+      },
+      "CancelHotel": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName": "arn:aws:lambda:eu-west-1:0123456789:function:cancelReservation",
+          "Payload": {
+            "Input.$": "$"
+          }
+        },
+        "ResultSelector": {
+          "status.$": "$.Payload.status"
+        },
+        "ResultPath": "$.hotelReservation.result",
+        "Next": "IsHotelCancellationSuccessful"
+      },
+      "IsFlightCancellationSuccessful": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.flightReservation.result.status",
+            "StringEquals": "CANCELLED",
+            "Next": "TripNotAvailable"
+          }
+        ],
+        "Default": "ManualIntervention"
+      },
+      "IsHotelCancellationSuccessful": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.hotelReservation.result.status",
+            "StringEquals": "CANCELLED",
+            "Next": "CancelFlight"
+          }
+        ],
+        "Default": "ManualIntervention"
+      },
+      "BookedSuccessfully": {
+        "Type": "Pass",
+        "ResultPath": null,
+        "End": true
+      },
+      "TripNotAvailable": {
+        "Type": "Pass",
+        "ResultPath": null,
+        "End": true
+      },
+      "ManualIntervention": {
+        "Type": "Pass",
+        "ResultPath": null,
+        "End": true
+      }
+    }
+  }
